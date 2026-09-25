@@ -1,0 +1,36 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: ${{ matrix.os }} / nvim ${{ matrix.version }}
+    runs-on: ${{ matrix.os }}
+    # nightly の破壊的変更で PR がブロックされないよう、失敗しても全体は成功扱いにする
+    continue-on-error: ${{ matrix.version == 'nightly' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        # v0.10.4: 最低対応バージョン（vim.uv を使うため 0.10 以上が必要）
+        version: [v0.10.4, stable, nightly]
+        include:
+          # macOS はパスにシンボリックリンク（/var → /private/var）があるので別途確認する
+          - os: macos-latest
+            version: stable
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: rhysd/action-setup-vim@v1
+        with:
+          neovim: true
+          version: ${{ matrix.version }}
+
+      - name: Run tests
+        run: make test
